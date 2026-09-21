@@ -79,9 +79,9 @@ android {
             jniDebuggable false
             signingConfig signingConfigs.debug
             applicationIdSuffix ".beta"
-            minifyEnabled true
+            // [ci] R8 removed: minifyEnabled true
             multiDexEnabled true
-            shrinkResources true
+            // [ci] R8 removed: shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), '../TMessagesProj/proguard-rules.pro', '../TMessagesProj/proguard-rules-beta.pro'
             ndk.debugSymbolLevel = 'FULL'
         }
@@ -91,9 +91,9 @@ android {
             jniDebuggable false
             signingConfig signingConfigs.debug
             applicationIdSuffix ".beta"
-            minifyEnabled true
+            // [ci] R8 removed: minifyEnabled true
             multiDexEnabled true
-            shrinkResources true
+            // [ci] R8 removed: shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), '../TMessagesProj/proguard-rules.pro', '../TMessagesProj/proguard-rules-beta.pro'
             ndk.debugSymbolLevel = 'FULL'
         }
@@ -103,9 +103,9 @@ android {
             jniDebuggable false
             signingConfig signingConfigs.debug
             applicationIdSuffix ".beta"
-            minifyEnabled true
+            // [ci] R8 removed: minifyEnabled true
             multiDexEnabled true
-            shrinkResources true
+            // [ci] R8 removed: shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), '../TMessagesProj/proguard-rules.pro', '../TMessagesProj/proguard-rules-beta.pro'
             ndk.debugSymbolLevel = 'FULL'
         }

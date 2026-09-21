@@ -1,0 +1,99 @@
+name: Build Telegram APK
+
+# CI for the Telegram Android fork.
+# Builds a release APK (R8/minification disabled in the Gradle files, see below).
+#
+# Notes:
+#  * R8 / resource shrinking is turned off in the Gradle files themselves
+#    (gradle.properties + the *App*/build.gradle buildTypes), so the produced APK
+#    is unminified.
+#  * release.keystore (dummy, shipped in the repo) and the RELEASE_* passwords in
+#    gradle.properties are used to sign the APK, so it is installable out of the box.
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      gradle_task:
+        description: "Gradle task to run"
+        required: false
+        default: ":TMessagesProj_App:assembleAfatRelease"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GRADLE_TASK: ${{ github.event.inputs.gradle_task || ':TMessagesProj_App:assembleAfatRelease' }}
+  NDK_VERSION: 27.2.12479018
+
+jobs:
+  build:
+    name: Build (${{ github.event.inputs.gradle_task || ':TMessagesProj_App:assembleAfatRelease' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      # Telegram + its submodules (ffmpeg, boringssl, ...) are large; free up
+      # space on the runner before the NDK build starts.
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: false
+          large-packages: false
+          swap-storage: false
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+          fetch-depth: 1
+
+      # Matches the README: --recursive --shallow-submodules
+      - name: Init submodules
+        run: git submodule update --init --recursive --depth=1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK / NDK packages
+        run: |
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "ndk;${NDK_VERSION}" \
+            "cmake;3.22.1"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        run: |
+          chmod +x ./gradlew
+          ./gradlew ${GRADLE_TASK} --stacktrace
+
+      - name: Collect APKs
+        if: always()
+        run: |
+          mkdir -p artifacts
+          find . -path '*/build/outputs/apk/*' -name '*.apk' -exec cp -v {} artifacts/ \;
+          ls -la artifacts/ || true
+
+      - name: Upload APKs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: telegram-apk
+          path: artifacts/*.apk
+          if-no-files-found: warn

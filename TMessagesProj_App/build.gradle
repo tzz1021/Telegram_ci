@@ -81,8 +81,8 @@ android {
             jniDebuggable false
             signingConfig signingConfigs.release
             applicationIdSuffix ".web"
-            minifyEnabled true
-            shrinkResources true
+            // [ci] R8 removed: minifyEnabled true
+            // [ci] R8 removed: shrinkResources true
             multiDexEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), '../TMessagesProj/proguard-rules.pro'
             ndk.debugSymbolLevel = 'FULL'
@@ -92,8 +92,8 @@ android {
             debuggable false
             jniDebuggable false
             signingConfig signingConfigs.release
-            minifyEnabled true
-            shrinkResources true
+            // [ci] R8 removed: minifyEnabled true
+            // [ci] R8 removed: shrinkResources true
             multiDexEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), '../TMessagesProj/proguard-rules.pro'
             ndk.debugSymbolLevel = 'FULL'
