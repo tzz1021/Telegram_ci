@@ -67,8 +67,8 @@ jobs:
         with:
           accept-android-sdk-licenses: true
 
-      - name: Accept Android SDK licenses
-        run: yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          packages: |
+            platform-tools
 
       - name: Install SDK / NDK packages
         run: |
