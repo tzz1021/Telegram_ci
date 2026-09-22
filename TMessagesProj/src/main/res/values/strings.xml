@@ -2256,6 +2256,7 @@
     <string name="ColorThemeChangedInfo">You can change it back in *Chat Settings*.</string>
     <string name="ThemeSetUrl">Set link</string>
     <string name="BubbleRadius">Message corners</string>
+    <string name="FilenameMaxLines">Filename max lines</string>
     <string name="ChatList">Chat list view</string>
     <string name="ChatListDefault">Two lines</string>
     <string name="ChatListExpanded">Three lines</string>

@@ -12850,7 +12850,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             if (name.length() == 0) {
                 name = getString("AttachDocument", R.string.AttachDocument);
             }
-            docTitleLayout = StaticLayoutEx.createStaticLayout(name, Theme.chat_docNamePaint, maxWidth, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false, TextUtils.TruncateAt.MIDDLE, maxWidth, 2, false);
+            docTitleLayout = StaticLayoutEx.createStaticLayout(name, Theme.chat_docNamePaint, maxWidth, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false, TextUtils.TruncateAt.MIDDLE, maxWidth, SharedConfig.fileNameMaxLines, false);
             docTitleOffsetX = Integer.MIN_VALUE;
             int width;
             if (docTitleLayout != null && docTitleLayout.getLineCount() > 0) {

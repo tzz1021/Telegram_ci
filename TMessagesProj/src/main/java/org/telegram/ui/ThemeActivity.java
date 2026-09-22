@@ -199,6 +199,9 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
     @Keep
     private int bubbleRadiusRow;
     private int bubbleRadiusInfoRow;
+    private int fileNameLinesHeaderRow;
+    @Keep
+    private int fileNameLinesRow;
     private int chatListHeaderRow;
     private int chatListRow;
     private int chatListInfoRow;
@@ -454,6 +457,79 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
         }
     }
 
+    private class FileNameLinesCell extends FrameLayout {
+
+        private SeekBarView sizeBar;
+        private int startLines = 2;
+        private int endLines = 5;
+
+        private TextPaint textPaint;
+
+        public FileNameLinesCell(Context context) {
+            super(context);
+
+            setWillNotDraw(false);
+
+            textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+            textPaint.setTextSize(dp(16));
+
+            sizeBar = new SeekBarView(context);
+            sizeBar.setReportChanges(true);
+            sizeBar.setSeparatorsCount(endLines - startLines + 1);
+            sizeBar.setDelegate(new SeekBarView.SeekBarViewDelegate() {
+                @Override
+                public void onSeekBarDrag(boolean stop, float progress) {
+                    setFileNameLines(Math.round(startLines + (endLines - startLines) * progress), false);
+                }
+
+                @Override
+                public void onSeekBarPressed(boolean pressed) {
+                }
+
+                @Override
+                public CharSequence getContentDescription() {
+                    return String.valueOf(Math.round(startLines + (endLines - startLines) * sizeBar.getProgress()));
+                }
+
+                @Override
+                public int getStepsCount() {
+                    return endLines - startLines;
+                }
+            });
+            sizeBar.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+            addView(sizeBar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 38, Gravity.LEFT | Gravity.TOP, 5, 5, 39, 0));
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            textPaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhiteValueText));
+            canvas.drawText("" + SharedConfig.fileNameMaxLines, getMeasuredWidth() - dp(39), dp(28), textPaint);
+        }
+
+        @Override
+        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+            super.onMeasure(MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY), heightMeasureSpec);
+            sizeBar.setProgress((SharedConfig.fileNameMaxLines - startLines) / (float) (endLines - startLines));
+        }
+
+        @Override
+        public void invalidate() {
+            super.invalidate();
+            sizeBar.invalidate();
+        }
+
+        @Override
+        public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info) {
+            super.onInitializeAccessibilityNodeInfo(info);
+            sizeBar.getSeekBarAccessibilityDelegate().onInitializeAccessibilityNodeInfoInternal(this, info);
+        }
+
+        @Override
+        public boolean performAccessibilityAction(int action, Bundle arguments) {
+            return super.performAccessibilityAction(action, arguments) || sizeBar.getSeekBarAccessibilityDelegate().performAccessibilityActionInternal(this, action, arguments);
+        }
+    }
+
     public ThemeActivity(int type) {
         super();
         currentType = type;
@@ -490,6 +566,39 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
             }
 
             updateMenuItem();
+            return true;
+        }
+        return false;
+    }
+
+    private boolean setFileNameLines(int size, boolean layout) {
+        if (size != SharedConfig.fileNameMaxLines) {
+            SharedConfig.fileNameMaxLines = size;
+            SharedPreferences preferences = MessagesController.getGlobalMainSettings();
+            SharedPreferences.Editor editor = preferences.edit();
+            editor.putInt("fileNameMaxLines", SharedConfig.fileNameMaxLines);
+            editor.commit();
+
+            RecyclerView.ViewHolder holder = listView.findViewHolderForAdapterPosition(textSizeRow);
+            if (holder != null && holder.itemView instanceof TextSizeCell) {
+                TextSizeCell cell = (TextSizeCell) holder.itemView;
+                ChatMessageCell[] cells = cell.messagesCell.getCells();
+                for (int a = 0; a < cells.length; a++) {
+                    cells[a].getMessageObject().resetLayout();
+                    cells[a].requestLayout();
+                }
+                cell.invalidate();
+            }
+
+            holder = listView.findViewHolderForAdapterPosition(fileNameLinesRow);
+            if (holder != null && holder.itemView instanceof FileNameLinesCell) {
+                FileNameLinesCell cell = (FileNameLinesCell) holder.itemView;
+                if (layout) {
+                    cell.requestLayout();
+                } else {
+                    cell.invalidate();
+                }
+            }
             return true;
         }
         return false;
@@ -562,6 +671,8 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
         bubbleRadiusHeaderRow = -1;
         bubbleRadiusRow = -1;
         bubbleRadiusInfoRow = -1;
+        fileNameLinesHeaderRow = -1;
+        fileNameLinesRow = -1;
         chatListHeaderRow = -1;
         chatListRow = -1;
         chatListInfoRow = -1;
@@ -666,6 +777,9 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
             bubbleRadiusHeaderRow = rowCount++;
             bubbleRadiusRow = rowCount++;
             bubbleRadiusInfoRow = rowCount++;
+
+            fileNameLinesHeaderRow = rowCount++;
+            fileNameLinesRow = rowCount++;
 
             chatListHeaderRow = rowCount++;
             chatListRow = rowCount++;
@@ -2064,6 +2178,7 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
         private final static int TYPE_SAVE_TO_GALLERY = 19;
         private final static int TYPE_APP_ICON = 20;
         private final static int TYPE_CHOOSE_COLOR = 21;
+        private final static int TYPE_FILENAME_LINES = 22;
 
         private Context mContext;
         private boolean first = true;
@@ -2426,6 +2541,9 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                 case TYPE_BUBBLE_RADIUS:
                     view = new BubbleRadiusCell(mContext);
                     break;
+                case TYPE_FILENAME_LINES:
+                    view = new FileNameLinesCell(mContext);
+                    break;
                 case TYPE_TEXT_PREFERENCE:
                 default:
                     view = new TextCell(mContext);
@@ -2576,6 +2694,8 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                         headerCell.setText(getString("ChatList", R.string.ChatList));
                     } else if (position == bubbleRadiusHeaderRow) {
                         headerCell.setText(getString("BubbleRadius", R.string.BubbleRadius));
+                    } else if (position == fileNameLinesHeaderRow) {
+                        headerCell.setText(getString("FilenameMaxLines", R.string.FilenameMaxLines));
                     } else if (position == swipeGestureHeaderRow) {
                         headerCell.setText(getString("ChatListSwipeGesture", R.string.ChatListSwipeGesture));
                     } else if (position == selectThemeHeaderRow) {
@@ -2745,7 +2865,7 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                 return TYPE_THEME_TYPE;
             } else if (position == scheduleHeaderRow || position == automaticHeaderRow || position == preferedHeaderRow ||
                     position == settingsRow || position == themeHeaderRow || position == textSizeHeaderRow ||
-                    position == chatListHeaderRow || position == bubbleRadiusHeaderRow || position == swipeGestureHeaderRow ||
+                    position == chatListHeaderRow || position == bubbleRadiusHeaderRow || position == fileNameLinesHeaderRow || position == swipeGestureHeaderRow ||
                     position == selectThemeHeaderRow || position == appIconHeaderRow || position == mediaSoundHeaderRow ||
                     position == otherHeaderRow) {
                 return TYPE_HEADER;
@@ -2767,6 +2887,8 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                 return TYPE_THEME_ACCENT_LIST;
             } else if (position == bubbleRadiusRow) {
                 return TYPE_BUBBLE_RADIUS;
+            } else if (position == fileNameLinesRow) {
+                return TYPE_FILENAME_LINES;
             } else if (position == backgroundRow || position == editThemeRow || position == createNewThemeRow ||
                         position == liteModeRow || position == stickersRow) {
                 return TYPE_TEXT_PREFERENCE;
@@ -2797,7 +2919,7 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
     public ArrayList<ThemeDescription> getThemeDescriptions() {
         ArrayList<ThemeDescription> themeDescriptions = new ArrayList<>();
 
-        themeDescriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_CELLBACKGROUNDCOLOR, new Class[]{TextSettingsCell.class, TextCheckCell.class, HeaderCell.class, BrightnessControlCell.class, ThemeTypeCell.class, TextSizeCell.class, BubbleRadiusCell.class, ChatListCell.class, NotificationsCheckCell.class, ThemesHorizontalListCell.class, TintRecyclerListView.class, TextCell.class, PeerColorActivity.ChangeNameColorCell.class, SwipeGestureSettingsView.class, DefaultThemesPreviewCell.class, AppIconsSelectorCell.class}, null, null, null, Theme.key_windowBackgroundWhite));
+        themeDescriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_CELLBACKGROUNDCOLOR, new Class[]{TextSettingsCell.class, TextCheckCell.class, HeaderCell.class, BrightnessControlCell.class, ThemeTypeCell.class, TextSizeCell.class, BubbleRadiusCell.class, FileNameLinesCell.class, ChatListCell.class, NotificationsCheckCell.class, ThemesHorizontalListCell.class, TintRecyclerListView.class, TextCell.class, PeerColorActivity.ChangeNameColorCell.class, SwipeGestureSettingsView.class, DefaultThemesPreviewCell.class, AppIconsSelectorCell.class}, null, null, null, Theme.key_windowBackgroundWhite));
         themeDescriptions.add(new ThemeDescription(fragmentView, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundGray));
 
 //        themeDescriptions.add(new ThemeDescription(actionBar, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_actionBarDefault));
@@ -2840,6 +2962,9 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
 
         themeDescriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_PROGRESSBAR, new Class[]{BubbleRadiusCell.class}, new String[]{"sizeBar"}, null, null, null, Theme.key_player_progress));
         themeDescriptions.add(new ThemeDescription(listView, 0, new Class[]{BubbleRadiusCell.class}, new String[]{"sizeBar"}, null, null, null, Theme.key_player_progressBackground));
+
+        themeDescriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_PROGRESSBAR, new Class[]{FileNameLinesCell.class}, new String[]{"sizeBar"}, null, null, null, Theme.key_player_progress));
+        themeDescriptions.add(new ThemeDescription(listView, 0, new Class[]{FileNameLinesCell.class}, new String[]{"sizeBar"}, null, null, null, Theme.key_player_progressBackground));
 
         themeDescriptions.add(new ThemeDescription(listView, 0, new Class[]{ChatListCell.class}, null, null, null, Theme.key_radioBackground));
         themeDescriptions.add(new ThemeDescription(listView, 0, new Class[]{ChatListCell.class}, null, null, null, Theme.key_radioBackgroundChecked));
